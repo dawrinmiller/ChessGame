@@ -1,0 +1,29 @@
+{% load static %}
+{% now "U" as timestamp %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Chess Game</title>
+  <!-- prevents caching -->
+  <link rel="stylesheet" href="{% static 'css/style.css' %}?v={{ timestamp }}">
+</head>
+<body>
+  <h1>Chess</h1>
+  <div id="game-container">
+    <div id="left-panel">
+      <div id="status"></div>
+      <div id="move-log">Move log:</div>
+    </div>
+
+    <div id="board"></div>
+
+    <div id="right-panel">
+      <button onclick="startNewGame()">New Game</button>
+      <button onclick="saveGame()">Save Game</button>
+    </div>
+  </div>
+
+  <script src="{% static 'js/chess.js' %}"></script>
+</body>
+</html>
