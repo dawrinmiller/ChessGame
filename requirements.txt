@@ -1,0 +1,4 @@
+Django==5.2
+python-chess==1.999
+
+# Manual installation of Stockfish required, see README.md for instructions
