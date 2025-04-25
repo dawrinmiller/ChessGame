@@ -19,7 +19,8 @@ def new_game(request):
     return JsonResponse({
         'game_id': game.id,
         'fen': game.fen,
-        'status': game.status
+        'status': game.status,
+        'status_message': game.get_status_message(),
     })
  
 # ^^^ Creates a new game inside the python database by calling id (Automatic in django), fen and status
@@ -46,8 +47,8 @@ def make_move(request, game_id):
             return JsonResponse({
                 'success': True,
                 'fen': game.fen,
-                'status': game.status,
                 'status_message': game.get_status_message(),
+                'status': game.status,
                 'ai_move': ai_move
             })
         else:
@@ -68,8 +69,8 @@ def get_game_state(request, game_id):
         return JsonResponse({
             'game_id': game.id,
             'fen': game.fen,
+            'status_message': game.get_status_message(),
             'status': game.status,
-            'status_message': game.get_status_message()
         })
     
 # ^^^ Gathers the game state after any action and updates the board accordingly for both sides and reads board status (CHECKMATE,STALEMATE,ACTIVE,CHECK etc,)  ^^^
