@@ -47,6 +47,7 @@ def make_move(request, game_id):
                 'success': True,
                 'fen': game.fen,
                 'status': game.status,
+                'status_message': game.get_status_message(),
                 'ai_move': ai_move
             })
         else:
@@ -67,7 +68,8 @@ def get_game_state(request, game_id):
         return JsonResponse({
             'game_id': game.id,
             'fen': game.fen,
-            'status': game.status
+            'status': game.status,
+            'status_message': game.get_status_message()
         })
     
 # ^^^ Gathers the game state after any action and updates the board accordingly for both sides and reads board status (CHECKMATE,STALEMATE,ACTIVE,CHECK etc,)  ^^^

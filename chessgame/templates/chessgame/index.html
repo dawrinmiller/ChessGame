@@ -17,11 +17,18 @@
       <div id="move-log">Move log:</div>
     </div>
 
-    <div id="board"></div>
+    <div id="game-wrapper">
+      <div id="board"></div>
+      <div id="game-result"></div>
+    </div>
 
     <div id="right-panel">
       <button onclick="startNewGame()">New Game</button>
-      <button onclick="saveGame()">Save Game</button>
+
+      <div class="difficulty-setting">
+        <label for="difficulty">Difficulty: <span id="difficulty-value">10</span></label>
+        <input type="range" id="difficulty" min="1" max="20" value="10">
+      </div>
     </div>
   </div>
 

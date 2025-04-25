@@ -49,11 +49,22 @@ class Game(models.Model):
         return True
     
 # ^^^ Checks game status after move and if it is either checkmate or stalemate it updates game status to the correct state.  ^^^  
-
-
+        
     def get_winner(self):
         return 'WHITE' if self.status == 'WHITE_WIN' else 'BLACK' if self.status == 'BLACK_WIN' else None
     
 # ^^^ Returns the winner of the game ^^^
+
+    def get_status_message(self):
+        if self.status == 'WHITE_WIN':
+            return "Game over! You win!"
+        elif self.status == 'BLACK_WIN':
+            return "Game over! You lost!"
+        elif self.status == 'DRAW':
+            return "Game over! It's a draw!"
+        elif self.status == 'ACTIVE':
+            return "Game in progress."
+        else:
+            return "Unknown game status."
 
     

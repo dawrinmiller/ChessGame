@@ -1,6 +1,13 @@
 console.log('Chess.js is loading!');
 console.log('Chess.js is loading!');
 
+const difficultySlider = document.getElementById('difficulty');
+const difficultyValue = document.getElementById('difficulty-value');
+
+difficultySlider.addEventListener('input', () => {
+    difficultyValue.textContent = difficultySlider.value;
+});
+
 // Immediate log to verify script loading
 console.log('Chess.js loaded!');
 
@@ -13,6 +20,7 @@ const status = document.getElementById('status');
 let gameId = null;
 let isPlayerTurn = true;
 let selectedCell = null;
+let gameOver = false;
 
 // Add this function at the top of your file to get the CSRF token
 function getCSRFToken() {
@@ -241,15 +249,11 @@ async function startNewGame() {
         createBoard(board);
         isPlayerTurn = true;
         moveLog.innerHTML = '';
+        document.getElementById('game-result').textContent = '';
         updateStatus();
     } catch (error) {
         console.error('New game error:', error);
     }
-}
-
-// Saves the game (placeholder)
-function saveGame() {
-  alert("Game saved!");
 }
 
 // Update the game status
@@ -266,7 +270,8 @@ setInterval(async () => {
             createBoard(currentBoard);
             
             if (response.status !== 'ACTIVE') {
-                alert(`Game Over! ${response.status}`);
+                const resultEl = document.getElementById('game-result');
+                resultEl.textContent = response.status_message || `Game Over! ${response.status}`;
             } else {
                 isPlayerTurn = true;
                 updateStatus();
