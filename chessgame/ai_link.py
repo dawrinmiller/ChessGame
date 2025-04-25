@@ -24,8 +24,6 @@ class StockfishLink:
 
     def get_engine_path(self):
         """Build engine_path automatically."""
-
-        # Construct and return the complete path to the Stockfish executable
         base_dir = os.path.dirname(os.path.abspath(__file__))
         return os.path.join(base_dir, "stockfish", "stockfish.exe")
     

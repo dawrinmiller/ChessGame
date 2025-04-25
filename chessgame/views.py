@@ -1,7 +1,13 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from .models import Game
+from .ai_link import StockfishLink
 import json
+
+
+stockfish = StockfishLink()
+
+# Creates The Fish 
 
 def index(request):
     return render(request, 'chessgame/index.html')
@@ -33,10 +39,15 @@ def make_move(request, game_id):
             return JsonResponse({'error': 'Move is required'}, status=400)
             
         if game.make_move(move):
+            # After player's move, make AI move
+            ai_move = stockfish.get_best_move(game.fen)
+            game.make_move(ai_move)
+            
             return JsonResponse({
                 'success': True,
                 'fen': game.fen,
-                'status': game.status
+                'status': game.status,
+                'ai_move': ai_move
             })
         else:
             return JsonResponse({'error': 'Invalid move'}, status=400)
