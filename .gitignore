@@ -2,3 +2,4 @@ __pycache__/
 *.pyc
 stockfish/
 venv/
+db.sqlite3
