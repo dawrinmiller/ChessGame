@@ -53,13 +53,14 @@ const api = {
 
     makeMove: async (gameId, move) => {
         console.log('Calling makeMove API:', { gameId, move });
+        const difficulty = difficultySlider.value;
         const response = await fetch(`/make_move/${gameId}/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCSRFToken()
             },
-            body: JSON.stringify({ move: move })
+            body: JSON.stringify({ move: move, difficulty: difficulty })
         });
         const data = await response.json();
         console.log('makeMove response:', data);
