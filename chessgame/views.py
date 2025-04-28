@@ -32,6 +32,7 @@ def make_move(request, game_id):
     try:
         game = Game.objects.get(id=game_id)
         data = json.loads(request.body)
+        difficulty = data.get('difficulty')
         move = data.get('move')
 
 # ^^^ Takes every new move as a POST request and uses djangos gameid to find what game to update ^^^
@@ -40,7 +41,8 @@ def make_move(request, game_id):
             return JsonResponse({'error': 'Move is required'}, status=400)
             
         if game.make_move(move):
-            # After player's move, make AI move
+            # After player's move, set difficulty and make AI move
+            stockfish.set_difficulty(difficulty)
             ai_move = stockfish.get_best_move(game.fen)
             game.make_move(ai_move)
             
