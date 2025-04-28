@@ -6,4 +6,5 @@ urlpatterns = [
     path('new_game/', views.new_game, name='new_game'),
     path('make_move/<int:game_id>/', views.make_move, name='make_move'),
     path('get_game_state/<int:game_id>/', views.get_game_state, name='get_game_state'),
+    path('set_ai_level/', views.set_ai_level, name='set_ai_level'),
 ] 

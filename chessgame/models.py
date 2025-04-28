@@ -39,14 +39,29 @@ class Game(models.Model):
 
 # ^^^ Move validation(Will ensure that the move is legal and updates the game state) then makes move if it is legal^^^ 
 
+        # Update game status
         if board.is_checkmate():
-            self.status = 'BLACK_WIN' if board.turn else 'WHITE_WIN'
-        elif board.is_stalemate() or board.is_insufficient_material():
+            # If it's black's turn after the move, then white won
+            self.status = 'WHITE_WIN' if board.turn else 'BLACK_WIN'
+        elif board.is_stalemate():
             self.status = 'DRAW'
-            
+        elif board.is_insufficient_material():
+            self.status = 'DRAW'
+        elif board.is_fifty_moves():
+            self.status = 'DRAW'
+        elif board.is_repetition():
+            self.status = 'DRAW'
+        
         self.fen = board.fen()
         self.save()
-        return True
+        
+        # Return additional information about the game state
+        return {
+            'success': True,
+            'is_check': board.is_check(),
+            'is_game_over': board.is_game_over(),
+            'status': self.status
+        }
     
 # ^^^ Checks game status after move and if it is either checkmate or stalemate it updates game status to the correct state.  ^^^  
 

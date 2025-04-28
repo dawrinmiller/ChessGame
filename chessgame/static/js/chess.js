@@ -164,6 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Start the game
     startNewGame();
+
+    document.getElementById('save-game').addEventListener('click', saveGame);
 });
 
 // Modify the handleCellClick function to add more logging
@@ -204,10 +206,29 @@ async function handleCellClick(e) {
             const response = await api.makeMove(gameId, move);
             
             if (response.success) {
-                console.log('Move successful');
                 const newBoard = fenToBoard(response.fen);
                 createBoard(newBoard);
                 moveLog.innerHTML += `${selectedPiece} ${move}<br>`;
+                
+                // Handle check and game over states
+                if (response.is_game_over) {
+                    alert(`Game Over! ${response.status}`);
+                    // Optionally restart game or disable further moves
+                } else if (response.is_check) {
+                    status.innerText = "Check!";
+                    setTimeout(() => {
+                        status.innerText = isPlayerTurn ? "Your Turn" : "AI's Turn";
+                    }, 1000);
+                }
+                
+                if (response.evaluation !== undefined) {
+                    updateEvalBar(response.evaluation);
+                }
+                
+                if (response.ai_stats !== undefined) {
+                    updateAIStats(response.ai_stats);
+                }
+                
                 isPlayerTurn = false;
                 updateStatus();
             } else {
@@ -249,7 +270,22 @@ async function startNewGame() {
 
 // Saves the game (placeholder)
 function saveGame() {
-  alert("Game saved!");
+    if (!gameId) {
+        alert("No game in progress!");
+        return;
+    }
+    fetch(`/get_game_state/${gameId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.fen) {
+                showFenModal(data.fen);
+            } else {
+                alert("Could not retrieve FEN.");
+            }
+        })
+        .catch(() => {
+            alert("Error retrieving game state.");
+        });
 }
 
 // Update the game status
@@ -271,9 +307,89 @@ setInterval(async () => {
                 isPlayerTurn = true;
                 updateStatus();
             }
+            
+            if (response.evaluation !== undefined) {
+                updateEvalBar(response.evaluation);
+            }
+            
+            if (response.ai_stats !== undefined) {
+                updateAIStats(response.ai_stats);
+            }
         } catch (error) {
             console.error('Failed to get game state:', error);
         }
     }
 }, 1000);
+
+function updateEvalBar(evaluation) {
+    const barFill = document.getElementById('eval-bar-vertical-fill');
+    const barLabel = document.getElementById('eval-bar-vertical-label');
+
+    let percent = 50;
+    let label = '';
+
+    if (typeof evaluation === 'string' && evaluation.startsWith('Mate')) {
+        if (evaluation.includes('-')) {
+            percent = 100; // All black (top-down)
+            label = evaluation + ' (Black wins)';
+        } else {
+            percent = 0; // All white
+            label = evaluation + ' (White wins)';
+        }
+    } else if (!isNaN(evaluation)) {
+        let evalNum = Math.max(-5, Math.min(5, evaluation / 100));
+        percent = 50 - (evalNum * 10); // -5 -> 100% (all black), 0 -> 50%, +5 -> 0% (all white)
+        label = (evaluation > 0 ? '+' : '') + (evaluation / 100).toFixed(2);
+    } else {
+        percent = 50;
+        label = '0.00';
+    }
+
+    barFill.style.height = percent + '%';
+    barFill.style.top = '0';
+    barLabel.innerText = label;
+}
+
+function updateAIStats(aiStats) {
+    const statsDiv = document.getElementById('ai-stats-content');
+    if (!statsDiv) return; // Prevents errors if the div is missing
+    if (!aiStats || Object.keys(aiStats).length === 0) {
+        statsDiv.innerText = "No AI move yet.";
+        return;
+    }
+    let html = "";
+    for (const [key, value] of Object.entries(aiStats)) {
+        html += `<div><b>${key}:</b> ${value}</div>`;
+    }
+    statsDiv.innerHTML = html;
+}
+
+function showFenModal(fen) {
+    const modal = document.getElementById('fen-modal');
+    const input = document.getElementById('fen-modal-input');
+    input.value = fen;
+    modal.style.display = 'flex';
+}
+
+function hideFenModal() {
+    document.getElementById('fen-modal').style.display = 'none';
+}
+
+function copyFenToClipboard() {
+    const input = document.getElementById('fen-modal-input');
+    input.select();
+    input.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand('copy');
+    // Optionally, show a quick confirmation
+    document.getElementById('fen-modal-copy').innerText = 'Copied!';
+    setTimeout(() => {
+        document.getElementById('fen-modal-copy').innerText = 'Copy';
+    }, 1000);
+}
+
+// Attach modal event listeners after DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('fen-modal-close').onclick = hideFenModal;
+    document.getElementById('fen-modal-copy').onclick = copyFenToClipboard;
+});
 
