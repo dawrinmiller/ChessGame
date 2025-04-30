@@ -205,7 +205,14 @@ async function handleCellClick(e) {
     if (!target.classList.contains('cell')) return;
 
     const piece = target.innerHTML;
-    console.log('Clicked piece:', piece); // Debug log
+    console.log('Clicked piece:', piece);
+    
+    // If clicking the same cell that's already selected, deselect it
+    if (selectedCell && selectedCell === target) {
+        selectedCell.classList.remove('selected');
+        selectedCell = null;
+        return;
+    }
     
     if (selectedCell) {
         // Get the move coordinates
@@ -216,7 +223,7 @@ async function handleCellClick(e) {
         
         // Get the current piece from the board, not from the cached selectedCell
         const selectedPiece = selectedCell.innerHTML;
-        console.log('Moving piece:', selectedPiece); // Debug log
+        console.log('Moving piece:', selectedPiece);
         
         // Convert to chess notation
         const fromSquare = String.fromCharCode(97 + fromCol) + (8 - fromRow);
@@ -224,7 +231,7 @@ async function handleCellClick(e) {
         const move = fromSquare + toSquare;
 
         // ONLY check for pawn promotion if the selected piece is a pawn AND it's moving to the last rank
-        if (selectedPiece === '♙' && toRow === 0) { // Only check white pawns reaching the 8th rank
+        if (selectedPiece === '♙' && toRow === 0) {
             showPromotionModal(move);
             return;
         }
@@ -234,7 +241,7 @@ async function handleCellClick(e) {
     } else if (isPlayerTurn && piece) {
         // Check if the piece belongs to the player (white pieces)
         const isWhitePiece = '♔♕♖♗♘♙'.includes(piece);
-        console.log('Is white piece?', isWhitePiece); // Debug log
+        console.log('Is white piece?', isWhitePiece);
         
         if (isWhitePiece) {
             // Clear any previous selection
