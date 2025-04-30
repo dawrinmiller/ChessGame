@@ -13,7 +13,7 @@
   <h1>Chess</h1>
   <div id="game-container">
     <div id="left-panel">
-      <button id="new-game">New Game</button>
+      <button id="Load-Game">Load-Game</button>
       <button id="save-game">Save Game</button>
       <div id="status"></div>
       <!-- You can add more controls here -->
@@ -43,10 +43,23 @@
 
   <div id="fen-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; z-index:1000;">
     <div style="background:#fff; padding:20px; border-radius:8px; min-width:300px; box-shadow:0 2px 12px #0003; position:relative;">
-      <h3>Current FEN</h3>
-      <input id="fen-modal-input" type="text" style="width:100%; font-size:14px; margin-bottom:10px;" readonly>
+      <h3>Load/Save FEN</h3>
+      <input id="fen-modal-input" type="text" style="width:100%; font-size:14px; margin-bottom:10px;">
+      <button id="fen-modal-load">Load</button>
       <button id="fen-modal-copy">Copy</button>
       <button id="fen-modal-close" style="float:right;">Close</button>
+    </div>
+  </div>
+
+  <div id="promotion-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.4); align-items:center; justify-content:center; z-index:1000;">
+    <div style="background:#fff; padding:20px; border-radius:8px; min-width:200px; box-shadow:0 2px 12px #0003; position:relative;">
+        <h3>Choose Promotion Piece</h3>
+        <div style="display:flex; justify-content:space-around; font-size:32px;">
+            <div class="promotion-piece" data-piece="q">♕</div>
+            <div class="promotion-piece" data-piece="r">♖</div>
+            <div class="promotion-piece" data-piece="b">♗</div>
+            <div class="promotion-piece" data-piece="n">♘</div>
+        </div>
     </div>
   </div>
 

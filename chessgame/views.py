@@ -5,6 +5,7 @@ from .ai_link import StockfishLink
 import json
 import logging
 from django.views.decorators.csrf import csrf_exempt
+import chess
 
 # Imports and adds security exemption
 
@@ -20,7 +21,26 @@ def index(request):
 # ^^^ Displays the home page of the chess game by calling to the index.html page ^^^
 
 def new_game(request):
-    game = Game.objects.create()
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            custom_fen = data.get('fen')
+            if custom_fen:
+                # Validate the FEN string before creating the game
+                try:
+                    chess.Board(custom_fen)  # This will raise an exception if FEN is invalid
+                    game = Game.objects.create(fen=custom_fen)
+                except ValueError:
+                    return JsonResponse({'error': 'Invalid FEN string'}, status=400)
+            else:
+                # Use default starting position if no FEN provided
+                game = Game.objects.create(fen=chess.STARTING_FEN)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
+    else:
+        # Handle GET request - always use default starting position
+        game = Game.objects.create(fen=chess.STARTING_FEN)
+    
     return JsonResponse({
         'game_id': game.id,
         'fen': game.fen,
