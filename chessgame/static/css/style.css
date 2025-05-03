@@ -19,10 +19,23 @@ h1 {
     align-items: flex-start;
 }
   
-#left-panel, #right-panel {
+#left-panel {
     display: flex;
     flex-direction: column;
     gap: 20px;
+}
+  
+#main-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+  
+#board-bar-log {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 16px; /* space between board, bar, and log */
 }
   
 #board {
@@ -85,11 +98,57 @@ button:active {
 }
   
 #move-log {
-    max-height: 200px;
+    max-height: 480px;
+    min-width: 120px;
+    width: 140px;
     overflow-y: auto;
     border: 1px solid #ccc;
     padding: 10px;
     background: white;
+    margin-left: 0;
+}
+  
+#eval-bar-vertical-container {
+    height: 400px;
+    width: 48px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+#eval-bar-vertical {
+    position: relative;
+    width: 32px;
+    height: 400px;
+    background: #fff; /* White background for white advantage */
+    border: 2px solid #333;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+#eval-bar-vertical-fill {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    width: 100%;
+    background: #000; /* Black fill for black advantage */
+    height: 50%; /* Default: even */
+    transition: height 0.4s cubic-bezier(.4,2.2,.2,1), top 0.4s cubic-bezier(.4,2.2,.2,1);
+    z-index: 1;
+}
+
+#eval-bar-vertical-label {
+    position: absolute;
+    width: 100%;
+    text-align: center;
+    top: 8px;
+    left: 0;
+    font-weight: bold;
+    color: #333;
+    z-index: 2;
+    pointer-events: none;
+    font-size: 14px;
+    text-shadow: 0 1px 2px #fff, 0 -1px 2px #fff;
 }
 
 .difficulty-setting {

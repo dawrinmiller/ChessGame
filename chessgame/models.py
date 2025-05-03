@@ -34,22 +34,35 @@ class Game(models.Model):
             return False
         
         board = self.get_board()
-        move = chess.Move.from_uci(move_uci)
-        board.push(move)
-
+        try:
+            # Handle promotion moves (they will include the promotion piece)
+            if len(move_uci) == 5:  # e.g., "e7e8q"
+                move = chess.Move.from_uci(move_uci)
+            else:  # Regular moves
+                move = chess.Move.from_uci(move_uci)
+            
+            board.push(move)
+            
+            # Update game status
+            if board.is_checkmate():
+                self.status = 'WHITE_WIN' if not board.turn else 'BLACK_WIN'
+            elif board.is_stalemate() or board.is_insufficient_material() or board.is_fifty_moves() or board.is_repetition():
+                self.status = 'DRAW'
+            
+            self.fen = board.fen()
+            self.save()
+            
+            return {
+                'success': True,
+                'is_check': board.is_check(),
+                'is_game_over': board.is_game_over(),
+                'status': self.status
+            }
+        except ValueError:
+            return False
+    
 # ^^^ Move validation(Will ensure that the move is legal and updates the game state) then makes move if it is legal^^^ 
 
-        if board.is_checkmate():
-            self.status = 'BLACK_WIN' if board.turn else 'WHITE_WIN'
-        elif board.is_stalemate() or board.is_insufficient_material():
-            self.status = 'DRAW'
-            
-        self.fen = board.fen()
-        self.save()
-        return True
-    
-# ^^^ Checks game status after move and if it is either checkmate or stalemate it updates game status to the correct state.  ^^^  
-        
     def get_winner(self):
         return 'WHITE' if self.status == 'WHITE_WIN' else 'BLACK' if self.status == 'BLACK_WIN' else None
     

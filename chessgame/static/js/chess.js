@@ -20,7 +20,7 @@ const status = document.getElementById('status');
 let gameId = null;
 let isPlayerTurn = true;
 let selectedCell = null;
-let gameOver = false;
+let pendingPromotion = null;
 
 // Add this function at the top of your file to get the CSRF token
 function getCSRFToken() {
@@ -41,14 +41,30 @@ function getCSRFToken() {
 
 // API functions for communicating with Django backend(Had to change for FEN :( )
 const api = {
-    newGame: async () => {
-        console.log('Calling newGame API');
-        const response = await fetch('/new_game/', {
-            method: 'GET'
-        });
-        const data = await response.json();
-        console.log('newGame response:', data);
-        return data;
+    newGame: async (fen = null) => {
+        console.log('Calling newGame API with FEN:', fen);
+        if (fen) {
+            // If custom FEN is provided, use POST
+            const response = await fetch('/new_game/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({ fen: fen })
+            });
+            const data = await response.json();
+            console.log('newGame response:', data);
+            return data;
+        } else {
+            // If no FEN provided, use GET for default starting position
+            const response = await fetch('/new_game/', {
+                method: 'GET'
+            });
+            const data = await response.json();
+            console.log('newGame response:', data);
+            return data;
+        }
     },
 
     makeMove: async (gameId, move) => {
@@ -173,68 +189,76 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Start the game
     startNewGame();
+
+    document.getElementById('save-game').addEventListener('click', saveGame);
+
+    // Add styles for promotion pieces
+    const style = document.createElement('style');
+    style.textContent = `
+        .promotion-piece {
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .promotion-piece:hover {
+            background-color: #eee;
+        }
+    `;
+    document.head.appendChild(style);
 });
 
 // Modify the handleCellClick function to add more logging
 async function handleCellClick(e) {
-    console.log('Cell clicked!', e.target);
-    
-    if (!gameId || !isPlayerTurn) {
-        console.log('Game state:', { gameId, isPlayerTurn });
-        return;
-    }
-    
     const target = e.target;
-    if (!target.classList.contains('cell')) {
-        console.log('Not a cell element');
-        return;
-    }
-    
-    const row = parseInt(target.dataset.row);
-    const col = parseInt(target.dataset.col);
+    if (!target.classList.contains('cell')) return;
+
     const piece = target.innerHTML;
-    console.log('Clicked cell:', { row, col, piece });
+    console.log('Clicked piece:', piece);
     
-    if (selectedCell) {
-        const selectedRow = parseInt(selectedCell.dataset.row);
-        const selectedCol = parseInt(selectedCell.dataset.col);
-        const selectedPiece = selectedCell.innerHTML;
-        
-        if (selectedRow === row && selectedCol === col) {
-            selectedCell.classList.remove('selected');
-            selectedCell = null;
-            return;
-        }
-        
-        const move = `${String.fromCharCode(97 + selectedCol)}${8 - selectedRow}${String.fromCharCode(97 + col)}${8 - row}`;
-        console.log('Attempting move:', move);
-        
-        try {
-            const response = await api.makeMove(gameId, move);
-            
-            if (response.success) {
-                console.log('Move successful');
-                const newBoard = fenToBoard(response.fen);
-                createBoard(newBoard);
-                moveLog.innerHTML += `${selectedPiece} ${move}<br>`;
-                isPlayerTurn = false;
-                updateStatus();
-            } else {
-                console.log('Move failed');
-                showMoveError();
-            }
-        } catch (error) {
-            console.error('Move error:', error);
-            showMoveError();
-        }
-        
+    // If clicking the same cell that's already selected, deselect it
+    if (selectedCell && selectedCell === target) {
         selectedCell.classList.remove('selected');
         selectedCell = null;
-    } 
-    else if (piece && '♔♕♖♗♘♙'.includes(piece)) {
-        selectedCell = target;
-        selectedCell.classList.add('selected');
-        console.log('Selected piece:', piece);
+        return;
+    }
+    
+    if (selectedCell) {
+        // Get the move coordinates
+        const fromRow = parseInt(selectedCell.dataset.row);
+        const fromCol = parseInt(selectedCell.dataset.col);
+        const toRow = parseInt(target.dataset.row);
+        const toCol = parseInt(target.dataset.col);
+        
+        // Get the current piece from the board, not from the cached selectedCell
+        const selectedPiece = selectedCell.innerHTML;
+        console.log('Moving piece:', selectedPiece);
+        
+        // Convert to chess notation
+        const fromSquare = String.fromCharCode(97 + fromCol) + (8 - fromRow);
+        const toSquare = String.fromCharCode(97 + toCol) + (8 - toRow);
+        const move = fromSquare + toSquare;
+
+        // ONLY check for pawn promotion if the selected piece is a pawn AND it's moving to the last rank
+        if (selectedPiece === '♙' && toRow === 0) {
+            showPromotionModal(move);
+            return;
+        }
+
+        // Make the move if it's not a promotion
+        await makeMove(move);
+    } else if (isPlayerTurn && piece) {
+        // Check if the piece belongs to the player (white pieces)
+        const isWhitePiece = '♔♕♖♗♘♙'.includes(piece);
+        console.log('Is white piece?', isWhitePiece);
+        
+        if (isWhitePiece) {
+            // Clear any previous selection
+            if (selectedCell) {
+                selectedCell.classList.remove('selected');
+            }
+            selectedCell = target;
+            selectedCell.classList.add('selected');
+        }
     }
 }
 
@@ -242,7 +266,7 @@ async function handleCellClick(e) {
 async function startNewGame() {
     console.log('Starting new game...');
     try {
-        const response = await api.newGame();
+        const response = await api.newGame(null);  // Explicitly pass null for default position
         console.log('New game response:', response);
         gameId = response.game_id;
         console.log('Game ID:', gameId);
@@ -257,6 +281,26 @@ async function startNewGame() {
     }
 }
 
+// Saves the game (placeholder)
+function saveGame() {
+    if (!gameId) {
+        alert("No game in progress!");
+        return;
+    }
+    fetch(`/get_game_state/${gameId}/`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.fen) {
+                showFenModal(data.fen);
+            } else {
+                alert("Could not retrieve FEN.");
+            }
+        })
+        .catch(() => {
+            alert("Error retrieving game state.");
+        });
+}
+
 // Update the game status
 function updateStatus() {
     status.innerText = isPlayerTurn ? "Your Turn" : "AI's Turn";
@@ -267,19 +311,220 @@ setInterval(async () => {
     if (gameId && !isPlayerTurn) {
         try {
             const response = await api.getGameState(gameId);
-            const currentBoard = fenToBoard(response.fen);
-            createBoard(currentBoard);
-            
+
             if (response.status !== 'ACTIVE') {
-                const resultEl = document.getElementById('game-result');
-                resultEl.textContent = response.status_message || `Game Over! ${response.status}`;
-            } else {
+                alert(`Game Over! ${response.status}`);
+                return;
+            }
+
+            // Delay the board update by 500ms
+            setTimeout(() => {
+                const currentBoard = fenToBoard(response.fen);
+                createBoard(currentBoard);
+
                 isPlayerTurn = true;
                 updateStatus();
-            }
+
+                if (response.evaluation !== undefined) {
+                    updateEvalBar(response.evaluation);
+                }
+
+                if (response.ai_stats !== undefined) {
+                    updateAIStats(response.ai_stats);
+                }
+            }, )
+
         } catch (error) {
             console.error('Failed to get game state:', error);
         }
     }
-}, 1000);
+}, 500);
+
+function updateEvalBar(evaluation) {
+    const barFill = document.getElementById('eval-bar-vertical-fill');
+    const barLabel = document.getElementById('eval-bar-vertical-label');
+
+    let percent = 50;
+    let label = '';
+
+    if (typeof evaluation === 'string' && evaluation.startsWith('Mate')) {
+        if (evaluation.includes('-')) {
+            percent = 100; // All black (top-down)
+            label = evaluation + ' (Black wins)';
+        } else {
+            percent = 0; // All white
+            label = evaluation + ' (White wins)';
+        }
+    } else if (!isNaN(evaluation)) {
+        let evalNum = Math.max(-5, Math.min(5, evaluation / 100));
+        percent = 50 - (evalNum * 10); // -5 -> 100% (all black), 0 -> 50%, +5 -> 0% (all white)
+        label = (evaluation > 0 ? '+' : '') + (evaluation / 100).toFixed(2);
+    } else {
+        percent = 50;
+        label = '0.00';
+    }
+
+    barFill.style.height = percent + '%';
+    barFill.style.top = '0';
+    barLabel.innerText = label;
+}
+
+function updateAIStats(aiStats) {
+    const statsDiv = document.getElementById('ai-stats-content');
+    if (!statsDiv) return; // Prevents errors if the div is missing
+    if (!aiStats || Object.keys(aiStats).length === 0) {
+        statsDiv.innerText = "No AI move yet.";
+        return;
+    }
+    let html = "";
+    for (const [key, value] of Object.entries(aiStats)) {
+        html += `<div><b>${key}:</b> ${value}</div>`;
+    }
+    statsDiv.innerHTML = html;
+}
+
+// Update the showFenModal function to handle both load and save
+function showFenModal(fen = '') {
+    const modal = document.getElementById('fen-modal');
+    const input = document.getElementById('fen-modal-input');
+    input.value = fen;
+    input.readOnly = false; // Make input editable for loading
+    modal.style.display = 'flex';
+}
+
+// Add function to load FEN
+async function loadFen() {
+    const input = document.getElementById('fen-modal-input');
+    const fen = input.value.trim();
+    
+    try {
+        // Create a new game with the provided FEN
+        const response = await api.newGame(fen);  // Pass the FEN string here
+        gameId = response.game_id;
+        
+        // Update the board with the server's response
+        const board = fenToBoard(response.fen);
+        createBoard(board);
+        isPlayerTurn = true;
+        moveLog.innerHTML = '';
+        updateStatus();
+        
+        // Hide the modal
+        hideFenModal();
+    } catch (error) {
+        console.error('Error loading FEN:', error);
+        alert('Invalid FEN string. Please check the format and try again.');
+    }
+}
+
+function hideFenModal() {
+    document.getElementById('fen-modal').style.display = 'none';
+}
+
+function copyFenToClipboard() {
+    const input = document.getElementById('fen-modal-input');
+    input.select();
+    input.setSelectionRange(0, 99999); // For mobile devices
+    document.execCommand('copy');
+    // Optionally, show a quick confirmation
+    document.getElementById('fen-modal-copy').innerText = 'Copied!';
+    setTimeout(() => {
+        document.getElementById('fen-modal-copy').innerText = 'Copy';
+    }, 1000);
+}
+
+// Update the DOMContentLoaded event listener
+document.addEventListener('DOMContentLoaded', () => {
+    // ... existing code ...
+    
+    // Add Load Game button handler
+    document.getElementById('Load-Game').onclick = () => showFenModal();
+    document.getElementById('fen-modal-load').onclick = loadFen;
+    document.getElementById('fen-modal-close').onclick = hideFenModal;
+    document.getElementById('fen-modal-copy').onclick = copyFenToClipboard;
+
+    // Add click handler to close promotion modal when clicking outside
+    document.getElementById('promotion-modal').addEventListener('click', (e) => {
+        if (e.target.id === 'promotion-modal') {
+            clearPromotion();
+        }
+    });
+});
+
+// Add promotion handling functions
+function showPromotionModal(move) {
+    console.log('Showing promotion modal for move:', move); // Debug log
+    const modal = document.getElementById('promotion-modal');
+    modal.style.display = 'flex';
+    pendingPromotion = move;
+
+    // Add click handlers to promotion pieces
+    const pieces = document.querySelectorAll('.promotion-piece');
+    pieces.forEach(piece => {
+        piece.onclick = async () => {
+            const promotionPiece = piece.dataset.piece;
+            const fullMove = pendingPromotion + promotionPiece;
+            console.log('Selected promotion:', fullMove); // Debug log
+            modal.style.display = 'none';
+            await makeMove(fullMove);
+            pendingPromotion = null;
+        };
+    });
+}
+
+// Add a function to clear any pending promotion
+function clearPromotion() {
+    pendingPromotion = null;
+    const modal = document.getElementById('promotion-modal');
+    modal.style.display = 'none';
+}
+
+// Update the makeMove function to handle promotion moves
+async function makeMove(move) {
+    if (!gameId || !isPlayerTurn) return;
+    
+    try {
+        const response = await api.makeMove(gameId, move);
+        console.log('Move response:', response); // Debug log
+        
+        if (response.success) {
+            const newBoard = fenToBoard(response.fen);
+            createBoard(newBoard);
+            moveLog.innerHTML += `${move}<br>`;
+            
+            // Clear the selected cell and its reference immediately after a successful move
+            if (selectedCell) {
+                selectedCell.classList.remove('selected');
+                selectedCell = null;
+            }
+            
+            if (response.is_game_over) {
+                alert(`Game Over! ${response.status}`);
+            } else if (response.is_check) {
+                status.innerText = "Check!";
+                setTimeout(() => {
+                    status.innerText = isPlayerTurn ? "Your Turn" : "AI's Turn";
+                }, 1000);
+            }
+            
+            if (response.evaluation !== undefined) {
+                updateEvalBar(response.evaluation);
+            }
+            
+            if (response.ai_stats !== undefined) {
+                updateAIStats(response.ai_stats);
+            }
+            
+            isPlayerTurn = false;
+            updateStatus();
+            clearPromotion(); // Clear any pending promotion after successful move
+        } else {
+            console.log('Move failed');
+            showMoveError();
+        }
+    } catch (error) {
+        console.error('Move error:', error);
+        showMoveError();
+    }
+}
 
