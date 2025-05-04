@@ -19,3 +19,10 @@ Install dependencies with:
 2. Extract the zip and find the stockfish executable.
 3. Rename the executable to "stockfish.exe" and place it inside a new folder in the project like so:
     "ChessGame/chessgame/stockfish/stockfish.exe"
+
+### Server Usage
+
+Run the server (from ChessGame directory) with:
+    "python manage.py runserver"
+Visit the url listed in the console.
+Close the server in the console with Ctrl + C when finished.
