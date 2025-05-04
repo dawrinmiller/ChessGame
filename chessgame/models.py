@@ -35,15 +35,13 @@ class Game(models.Model):
         
         board = self.get_board()
         try:
-            # Handle promotion moves (they will include the promotion piece)
-            if len(move_uci) == 5:  # e.g., "e7e8q"
+            if len(move_uci) == 5:  
                 move = chess.Move.from_uci(move_uci)
             else:  # Regular moves
                 move = chess.Move.from_uci(move_uci)
             
             board.push(move)
             
-            # Update game status
             if board.is_checkmate():
                 self.status = 'WHITE_WIN' if not board.turn else 'BLACK_WIN'
             elif board.is_stalemate() or board.is_insufficient_material() or board.is_fifty_moves() or board.is_repetition():

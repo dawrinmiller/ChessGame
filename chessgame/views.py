@@ -26,19 +26,16 @@ def new_game(request):
             data = json.loads(request.body)
             custom_fen = data.get('fen')
             if custom_fen:
-                # Validate the FEN string before creating the game
                 try:
-                    chess.Board(custom_fen)  # This will raise an exception if FEN is invalid
+                    chess.Board(custom_fen) 
                     game = Game.objects.create(fen=custom_fen)
                 except ValueError:
                     return JsonResponse({'error': 'Invalid FEN string'}, status=400)
             else:
-                # Use default starting position if no FEN provided
                 game = Game.objects.create(fen=chess.STARTING_FEN)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
     else:
-        # Handle GET request - always use default starting position
         game = Game.objects.create(fen=chess.STARTING_FEN)
     
     return JsonResponse({
@@ -67,18 +64,16 @@ def make_move(request, game_id):
         print("Move result:", move_result)
         if move_result:
             evaluation = stockfish.evaluate_fen(game.fen)
-            # Convert evaluation to centipawns (int) if possible
             eval_cp = 0
             if isinstance(evaluation, int):
                 eval_cp = evaluation
             elif isinstance(evaluation, str) and evaluation.startswith('Mate'):
-                eval_cp = None  # For mate, don't adjust difficulty
+                eval_cp = None 
             else:
                 try:
                     eval_cp = int(evaluation)
                 except Exception:
                     eval_cp = 0
-            # Only make AI move if game isn't over
             if game.status == 'ACTIVE':
                 ai_move, ai_stats = stockfish.get_dynamic_move(game.fen, eval_cp)
                 game.make_move(ai_move)
@@ -135,4 +130,4 @@ def set_ai_level(request):
     return JsonResponse({'error': 'POST request required'}, status=400)
 
 
-#View to allow the AI to change difficulty
+#View to allow the AI to change difficulty ^^^

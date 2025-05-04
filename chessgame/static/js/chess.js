@@ -179,8 +179,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add our click handler
     board.addEventListener('click', handleCellClick);
 
-    // Start the game
-    startNewGame();
+    // Check if we have a game ID in the URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const gameId = urlParams.get('game');
+    
+    if (gameId) {
+        // Load existing game
+        loadGame(gameId);
+    } else {
+        // Start new game
+        startNewGame();
+    }
 
     document.getElementById('save-game').addEventListener('click', saveGame);
 
@@ -472,49 +481,68 @@ function clearPromotion() {
 
 // Update the makeMove function to handle promotion moves
 async function makeMove(move) {
-    if (!gameId || !isPlayerTurn) return;
-    
     try {
-        const response = await api.makeMove(gameId, move);
-        console.log('Move response:', response); // Debug log
-        
-        if (response.success) {
-            const newBoard = fenToBoard(response.fen);
-            createBoard(newBoard);
-            moveLog.innerHTML += `${move}<br>`;
+        if (!gameId) {
+            console.error('No game ID available');
+            return;
+        }
+
+        const result = await api.makeMove(gameId, move);
+        console.log('Move result:', result);
+
+        if (result.success) {
+            // Update board with new FEN
+            const boardState = fenToBoard(result.fen);
+            createBoard(boardState);
             
-            // Clear the selected cell and its reference immediately after a successful move
+            // Update status and evaluation
+            updateStatus();
+            if (result.evaluation) {
+                updateEvalBar(result.evaluation);
+            }
+            if (result.ai_stats) {
+                updateAIStats(result.ai_stats);
+            }
+            
+            // Clear selection
             if (selectedCell) {
                 selectedCell.classList.remove('selected');
                 selectedCell = null;
             }
-            
-            if (response.is_game_over) {
-                alert(`Game Over! ${response.status}`);
-            } else if (response.is_check) {
-                status.innerText = "Check!";
-                setTimeout(() => {
-                    status.innerText = isPlayerTurn ? "Your Turn" : "AI's Turn";
-                }, 1000);
-            }
-            
-            if (response.evaluation !== undefined) {
-                updateEvalBar(response.evaluation);
-            }
-            
-            if (response.ai_stats !== undefined) {
-                updateAIStats(response.ai_stats);
-            }
-            
-            isPlayerTurn = false;
-            updateStatus();
-            clearPromotion(); // Clear any pending promotion after successful move
         } else {
-            console.log('Move failed');
             showMoveError();
         }
     } catch (error) {
-        console.error('Move error:', error);
+        console.error('Error making move:', error);
+        showMoveError();
+    }
+}
+
+// Add this function to load a game
+async function loadGame(gameId) {
+    try {
+        const gameState = await api.getGameState(gameId);
+        console.log('Loading game state:', gameState);
+        
+        // Update game state
+        gameId = gameState.game_id;
+        isPlayerTurn = true; // Reset to player's turn
+        
+        // Convert FEN to board and render
+        const boardState = fenToBoard(gameState.fen);
+        createBoard(boardState);
+        
+        // Update status
+        updateStatus();
+        
+        // Update evaluation if available
+        if (gameState.evaluation) {
+            updateEvalBar(gameState.evaluation);
+        }
+        
+        console.log('Game loaded successfully');
+    } catch (error) {
+        console.error('Error loading game:', error);
         showMoveError();
     }
 }
